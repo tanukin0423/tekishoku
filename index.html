@@ -1,0 +1,874 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>学生向け適職診断マトリクス12 - 強化版</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.7.1/jszip.min.js"></script>
+    <script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+     /* 基本スタイル */
+body {
+    font-family: 'Helvetica Neue', Arial, sans-serif;
+    line-height: 1.6;
+    margin: 0;
+    padding: 20px;
+    background-color: #f0f4f8;
+    color: #333;
+}
+
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    background-color: #fff;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 0 20px rgba(0,0,0,0.1);
+}
+
+h1 {
+    text-align: center;
+    color: #2c3e50;
+    margin-bottom: 30px;
+}
+
+/* 質問スタイル */
+.question {
+    margin-bottom: 25px;
+    background-color: #f9f9f9;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+}
+
+/* リッカート尺度スタイル */
+.likert-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+}
+
+.likert-option {
+    text-align: center;
+}
+
+.likert-option label {
+    display: block;
+    margin-top: 5px;
+    font-size: 12px;
+}
+
+/* ボタンスタイル */
+button {
+    display: block;
+    width: 250px;
+    margin: 30px auto;
+    padding: 15px;
+    background-color: #3498db;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 18px;
+    transition: background-color 0.3s;
+}
+
+button:hover {
+    background-color: #2980b9;
+}
+
+#saveButton, #printButton {
+    display: inline-block;
+    width: auto;
+    margin: 10px;
+    padding: 10px 20px;
+}
+
+/* 結果表示スタイル */
+#result {
+    margin-top: 30px;
+    padding: 25px;
+    background-color: #f0f8ff;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    display: none;
+}
+
+#resultText {
+    font-size: 16px;
+    line-height: 1.6;
+    color: #333;
+    white-space: pre-wrap;
+    margin-bottom: 20px;
+}
+
+/* マトリックススタイル */
+#matrix {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 10px;
+    margin: 20px 0;
+}
+
+.matrix-cell {
+    padding: 10px;
+    text-align: center;
+    font-size: 14px;
+    background-color: #ecf0f1;
+    border: 1px solid #bdc3c7;
+    border-radius: 5px;
+    transition: transform 0.3s ease, background-color 0.3s;
+}
+
+.matrix-cell:hover {
+    background-color: #d5dbdb;
+    transform: scale(1.05);
+}
+
+.highlight-1 { background-color: #e74c3c; color: white; }
+.highlight-2 { background-color: #3498db; color: white; }
+.highlight-3 { background-color: #2ecc71; color: white; }
+
+/* チャートスタイル */
+.chart-container {
+    width: 100%;
+    max-width: 600px;
+    margin: 30px auto;
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+#radarChart {
+    width: 800px;
+    height: 600px;
+}
+
+/* 職務記述スタイル */
+.job-description {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f4f6f7;
+    border-radius: 8px;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+    line-height: 1.8; /* 行間を広げる */
+}
+
+.job-description h3 {
+    color: #2c3e50;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 5px;
+    margin-bottom: 5px;
+}
+
+.job-description ul {
+    padding-left: 20px;
+}
+
+.job-description li {
+    margin-bottom: 10px;
+    line-height: 1.0;
+}
+
+/* キャリアアドバイススタイル */
+.career-advice {
+    margin-top: 10px;
+    line-height: 1.6;
+}
+
+.career-advice h4 {
+    margin-bottom: 5px;
+}
+
+.career-advice p {
+    margin: 0 0 5px 0;
+}
+
+/* プログレスバースタイル */
+#progressBar {
+    width: 100%;
+    background-color: #ddd;
+    border-radius: 5px;
+    margin-bottom: 20px;
+}
+
+#progressBarFill {
+    width: 0%;
+    height: 20px;
+    background-color: #4CAF50;
+    border-radius: 5px;
+    transition: width 0.3s ease-in-out;
+}
+
+/* メディアクエリ */
+@media (max-width: 600px) {
+    .container {
+        padding: 15px;
+    }
+    .likert-scale {
+        flex-direction: column;
+    }
+    .likert-option {
+        margin-bottom: 10px;
+    }
+    #matrix {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+/* 印刷スタイル */
+@media print {
+    body {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .matrix-cell, .highlight-1, .highlight-2, .highlight-3 {
+        print-color-adjust: exact !important;
+        -webkit-print-color-adjust: exact !important;
+    }
+    #matrix, .chart-container {
+        page-break-inside: avoid;
+    }
+    #saveButton, #printButton {
+        display: none;
+    }
+    #backButton {
+    display: none;
+    width: 120px;
+    margin: 10px auto;
+    padding: 10px;
+    background-color: #f39c12;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 16px;
+    transition: background-color 0.3s;
+}
+
+#backButton:hover {
+    background-color: #e67e22;
+}   
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>学生向け適職診断マトリクス12 - 強化版</h1>
+        <div id="progressBar">
+            <div id="progressBarFill"></div>
+        </div>
+        <div id="quiz">
+            <!-- 質問がここに動的に追加されます -->
+        </div>
+        <button id="backButton">戻る</button>
+        <button id="submitButton" style="display:none;">結果を見る</button>
+        <div id="result">
+            <h2>診断結果</h2>
+            <p id="resultText"></p>
+            <div id="matrix"></div>
+            <div class="chart-container">
+                <canvas id="radarChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="barChart"></canvas>
+            </div>
+            <div class="chart-container">
+                <canvas id="pieChart"></canvas>
+            </div>
+            <button id="saveButton">結果を保存</button>
+            <button id="printButton">結果を印刷</button>
+        </div>
+    </div>
+
+    <script>
+        const questions = [
+            { q: "新しい技術やデジタル機器を使うことに興味がありますか？", category: "tech" },
+            { q: "グループ活動やイベントの計画を立てるのが得意ですか？", category: "management" },
+            { q: "絵を描いたり、写真を撮ったり、何か作ることが好きですか？", category: "creative" },
+            { q: "人を助けたり、サポートしたりすることにやりがいを感じますか？", category: "service" },
+            { q: "他の人に何かを教えたり、説明したりするのが楽しいですか？", category: "education" },
+            { q: "健康や医療に関する話題に興味がありますか？", category: "healthcare" },
+            { q: "物を組み立てたり（製品を作ったり）、修理したりするのが好きですか？", category: "manufacturing" },
+            { q: "人と話をしたり、自分の意見を伝えたりするのが得意ですか？", category: "sales" },
+            { q: "植物や動物、自然環境に関心がありますか？", category: "agriculture" },
+            { q: "数学や科学の問題を解くのが好きです(好きでした）か？", category: "tech" },
+            { q: "普段、ニュースで経済や企業の話題に興味を持ちますか？", category: "management" },
+            { q: "自分だけのオリジナルな作品を作ることに喜びを感じますか？", category: "creative" },
+            { q: "普段、友達や身の回りの人々の相談に乗るのが得意ですか？", category: "service" },
+            { q: "子供とコミュニケーションをとり、物事を教えていくことがすきですか？", category: "education" },
+            { q: "病気や怪我をしている人を助けたいと思いますか？", category: "healthcare" },
+            { q: "機械の仕組みを理解したりすることに興味がありますか？", category: "manufacturing" },
+            { q: "新しい商品やサービスについて人に紹介するのが好きですか？", category: "sales" },
+            { q: "環境問題について考えることがありますか？", category: "agriculture" },
+            { q: "コンピュータープログラムを作ってみたり（経験がなくても良い）、それを仕事にしたいと思いますか？", category: "tech" },
+            { q: "チームのリーダーになることに抵抗がありませんか？", category: "management" },
+            { q: "音楽を作ったり、演奏したりするのを楽しみますか？", category: "creative" },
+            { q: "接客のアルバイトに興味がありますか？", category: "service" },
+            { q: "自分の知識や経験を他人に伝えるのが得意ですか？", category: "education" },
+            { q: "健康や栄養について学ぶのが好きですか？", category: "healthcare" },
+            { q: "製品の品質管理や改善活動に興味がありますか？", category: "manufacturing" },
+            { q: "人に商品を説明したり、製品の優れている点を売り込んだりするのが得意ですか？", category: "sales" },
+            { q: "農作物を育てたり、動物の世話をしたりすることに興味がありますか？", category: "agriculture" },
+            { q: "AIや新しい科学技術のニュースを聞くとワクワクしますか？", category: "science" },
+            { q: "企業の経営戦略について考えるのが面白いと思いますか？", category: "consulting" },
+            { q: "地域社会の問題解決に取り組みたいと思いますか？", category: "publicService" },
+            { q: "データを分析して傾向や法則を見つけるのが好きですか？", category: "science" },
+            { q: "ビジネスモデルを考えたり、起業したいと思ったことはありますか？", category: "consulting" },
+            { q: "法律や政治の仕組みについて学ぶのが好きですか？", category: "publicService" },
+            { q: "実験や研究に興味がありますか？", category: "science" },
+            { q: "企業の問題点を見つけ、解決策を提案するのが得意ですか？", category: "consulting" },
+            { q: "公平性や正義を重視しますか？", category: "publicService" },
+            { q: "複雑な数式の仕組みを考えたり、プログラムを理解するのが好きですか？", category: "tech" },
+            { q: "組織の効率を上げる方法を考えたりするのが得意ですか？", category: "management" },
+            { q: "デザインや色彩に関心がありますか？", category: "creative" },
+            { q: "他人の気持ちを理解し、共感することが得意ですか？", category: "service" },
+            { q: "仲間や周りの人々の成長を見守ることにやりがいを感じますか？", category: "education" },
+            { q: "医療技術の進歩に興味がありますか？", category: "healthcare" },
+            { q: "効率的な生産方法を考えるのが好きですか？", category: "manufacturing" },
+            { q: "市場動向やトレンドに敏感な方ですか？", category: "sales" },
+            { q: "持続可能な農業や食糧生産に関心がありますか？", category: "agriculture" },
+            { q: "科学的な疑問を解明することに興味がありますか？", category: "science" },
+            { q: "ビジネスケースを分析し、戦略を立てるのが好きですか？", category: "consulting" },
+            { q: "社会制度の改善に貢献したいと思いますか？", category: "publicService" }
+        ];
+
+        let currentQuestion = 0;
+        const scores = {};
+        const answers = []; // ユーザーの回答を保存する配列
+
+        function updateProgressBar() {
+            const progress = (currentQuestion / questions.length) * 100;
+            document.getElementById('progressBarFill').style.width = `${progress}%`;
+        }
+
+        function showQuestion() {
+    const quizDiv = document.getElementById('quiz');
+    const backButton = document.getElementById('backButton');
+    
+    if (currentQuestion < questions.length) {
+        const q = questions[currentQuestion];
+        quizDiv.innerHTML = `
+            <div class="question">
+                <p>${currentQuestion + 1}. ${q.q}</p>
+                <div class="likert-scale">
+                    ${[1, 2, 3, 4, 5].map(value => `
+                        <div class="likert-option">
+                            <input type="radio" id="q${currentQuestion}_${value}" name="answer" value="${value}" ${answers[currentQuestion] == value ? 'checked' : ''}>
+                            <label for="q${currentQuestion}_${value}">${value}</label>
+                        </div>
+                    `).join('')}
+                </div>
+            </div>
+        `;
+        document.querySelectorAll('input[name="answer"]').forEach(radio => {
+            radio.addEventListener('change', nextQuestion);
+        });
+        updateProgressBar();
+        
+        // 戻るボタンの表示/非表示を制御
+        backButton.style.display = currentQuestion > 0 ? 'block' : 'none';
+    } else {
+        quizDiv.innerHTML = '';
+        document.getElementById('submitButton').style.display = 'block';
+        backButton.style.display = 'none';
+        updateProgressBar();
+    }
+}
+
+function nextQuestion() {
+    const selectedAnswer = document.querySelector('input[name="answer"]:checked');
+    if (selectedAnswer) {
+        const answer = parseInt(selectedAnswer.value);
+        const category = questions[currentQuestion].category;
+        scores[category] = (scores[category] || 0) + answer;
+        answers[currentQuestion] = answer; // 回答を保存
+        currentQuestion++;
+        showQuestion();
+    }
+}
+function previousQuestion() {
+    if (currentQuestion > 0) {
+        currentQuestion--;
+        const category = questions[currentQuestion].category;
+        if (answers[currentQuestion]) {
+            scores[category] -= answers[currentQuestion];
+        }
+        showQuestion();
+    }
+}
+
+        function showResults() {
+    const resultDiv = document.getElementById('result');
+    const resultTextDiv = document.getElementById('resultText');
+    const sortedScores = Object.entries(scores).sort((a, b) => b[1] - a[1]);
+    
+    let resultText = '<h3>【適性が高い職種】</h3>\n';
+    if (sortedScores.length > 0) {
+        sortedScores.slice(0, 3).forEach((score, index) => {
+            resultText += `${index + 1}. ${getCategoryName(score[0])} (スコア: ${score[1]})\n`;
+        });
+        resultText += '\n<h3>【総合評価】</h3>\n';
+        resultText += getResultComment(sortedScores[0][0]);
+        
+        resultText += '\n\n<h3>【詳細なキャリアアドバイス】</h3>\n';
+        sortedScores.slice(0, 3).forEach((score, index) => {
+            resultText += `<div class="career-advice">`;
+            resultText += `<h4>${index + 1}. ${getCategoryName(score[0])}:</h4>`;
+            resultText += `<p>${getDetailedCareerAdvice(score[0], score[1])}</p>`;
+            resultText += `</div>`;
+        });
+    } else {
+        resultText += '評価を行うデータがありません。';
+    }
+    resultTextDiv.innerHTML = resultText;  // textContentをinnerHTMLに変更
+
+    // マトリクスの生成（既存のコード）
+    const matrixDiv = document.getElementById('matrix');
+    matrixDiv.innerHTML = '';
+    const categoryOrder = [
+        'tech', 'management', 'creative', 'service',
+        'education', 'healthcare', 'manufacturing', 'sales',
+        'agriculture', 'science', 'consulting', 'publicService'
+    ];
+    categoryOrder.forEach((category, index) => {
+        const cell = document.createElement('div');
+        cell.className = 'matrix-cell';
+        cell.textContent = getCategoryName(category);
+        const scoreIndex = sortedScores.findIndex(score => score[0] === category);
+        if (scoreIndex === 0) {
+            cell.classList.add('highlight-1');
+            cell.textContent += ' (1位)';
+        } else if (scoreIndex === 1) {
+            cell.classList.add('highlight-2');
+            cell.textContent += ' (2位)';
+        } else if (scoreIndex === 2) {  
+            cell.classList.add('highlight-3');
+            cell.textContent += ' (3位)';
+        }
+        matrixDiv.appendChild(cell);
+    });
+
+    // チャートの描画（既存のコード）
+    drawRadarChart(scores);
+    drawBarChart(scores);
+    drawPieChart(scores);
+
+    // ジョブ説明の生成（既存のコード）
+    const jobDescriptionsDiv = document.createElement('div');
+    jobDescriptionsDiv.id = 'jobDescriptions';
+    const topCategories = sortedScores.slice(0, 3).map(score => score[0]);
+    let jobDescriptionsHTML = '<div class="job-description">';
+    topCategories.forEach((category, index) => {
+        jobDescriptionsHTML += `
+            <h3>${index + 1}. ${getCategoryName(category)}</h3>
+            <ul>
+                ${getJobDescriptions(category).map(job => `<li>${job}</li>`).join('')}
+            </ul>
+        `;
+    });
+    jobDescriptionsHTML += '</div>';
+    jobDescriptionsDiv.innerHTML = jobDescriptionsHTML;
+    resultDiv.appendChild(jobDescriptionsDiv);
+
+    resultDiv.style.display = 'block';
+}
+
+        function getCategoryName(category) {
+            const categories = {
+                tech: 'IT・技術系',
+                management: 'マネジメント・管理系',
+                creative: 'クリエイティブ系',
+                service: '対人サービス系',
+                education: '教育系',
+                healthcare: '医療・福祉系',
+                manufacturing: '製造・生産系',
+                sales: '営業系',
+                agriculture: '農業・環境系',
+                science: '理系研究',
+                consulting: 'コンサル系',
+                publicService: '公務員系'
+            };
+            return categories[category] || category; 
+        }
+        function getDetailedCareerAdvice(category, score) {
+    let advice = '';
+    
+    if (score >= 20) {
+        advice += `あなたは${getCategoryName(category)}分野に非常に高い適性を持っています。`;
+    } else if (score >= 15) {
+        advice += `あなたは${getCategoryName(category)}分野に高い適性を持っています。`;
+    } else if (score >= 10) {
+        advice += `あなたは${getCategoryName(category)}分野にある程度の適性を持っています。`;
+    } else {
+        advice += `${getCategoryName(category)}分野はあなたの強みではないかもしれません。`;
+    }
+
+    advice += getCategorySpecificAdvice(category, score);
+    return advice;
+}
+
+function getCategorySpecificAdvice(category, score) {
+    const advices = {
+        tech: [
+            "プログラミングスキルを磨くことで、さらなるキャリアの可能性が広がります。",
+            "最新のテクノロジートレンドに常に注目し、学び続けることが重要です。",
+            "オープンソースプロジェクトへの参加やハッカソンへの参加を検討してみてください。",
+            "クラウドコンピューティングやAI、機械学習などの新興技術分野にも注目してみましょう。",
+            "技術系のブログやポッドキャストを定期的にチェックし、業界の動向を把握することをおすすめします。"
+        ],
+        management: [
+            "リーダーシップスキルを向上させるためのワークショップやセミナーに参加することをお勧めします。",
+            "プロジェクト管理の資格取得を検討してみてください。",
+            "多様なチームでの経験を積むことで、マネジメントスキルを向上させることができます。",
+            "ビジネス戦略や組織行動学について学ぶことで、より効果的なマネージャーになれるでしょう。",
+            "メンタリングプログラムに参加し、経験豊富な管理職から直接学ぶ機会を得ることをおすすめします。"
+        ],
+                      creative: [
+                    "ポートフォリオの作成や更新を定期的に行い、自身の創造性をアピールしましょう。",
+                    "異なる分野のクリエイティブな人々とネットワークを作ることで、新しいアイデアを得られます。",
+                    "デザインや創作に関するオンラインコースを受講し、スキルを磨き続けましょう。"
+                ],
+                service: [
+                    "接客スキルを向上させるためのトレーニングプログラムに参加することをお勧めします。",
+                    "異文化コミュニケーションスキルを磨くことで、より幅広い顧客に対応できるようになります。",
+                    "顧客満足度向上のための新しい手法やテクニックを学び続けましょう。"
+                ],
+                education: [
+                    "教育法や学習理論に関する最新の研究に注目し、教育スキルを向上させましょう。",
+                    "オンライン教育プラットフォームを活用し、教育の新しい可能性を探ってみてください。",
+                    "多様な学習者のニーズに対応できるよう、特別支援教育についても学んでみましょう。"
+                ],
+                healthcare: [
+                    "医療技術の進歩に常に注目し、最新の知識やスキルを習得し続けることが重要です。",
+                    "患者とのコミュニケーションスキルを向上させるためのワークショップに参加してみてください。",
+                    "チーム医療の重要性を理解し、他の医療専門家との協力スキルを磨きましょう。"
+                ],
+                manufacturing: [
+                    "最新の製造技術や自動化システムについて学び、スキルアップを図りましょう。",
+                    "品質管理や生産効率化に関する資格取得を検討してみてください。",
+                    "サステナビリティと環境に配慮した製造プロセスについて学ぶことをお勧めします。"
+                ],
+                sales: [
+                    "セールステクニックや交渉スキルを向上させるためのトレーニングに参加しましょう。",
+                    "顧客心理学や行動経済学を学び、より効果的な営業アプローチを身につけてください。",
+                    "デジタルマーケティングスキルを習得し、オンラインでの営業活動にも対応できるようになりましょう。"
+                ],
+                agriculture: [
+                    "持続可能な農業practices制や最新の農業技術について学び、知識を更新し続けましょう。",
+                    "農業経営や農業ビジネスに関する知識を深めることで、キャリアの可能性が広がります。",
+                    "環境保護と農業の両立について学び、エコフレンドリーな農業の実践を検討してみてください。"
+                ],
+                science: [
+                    "最新の科学研究や技術革新に常に注目し、知識を更新し続けることが重要です。",
+                    "異分野の研究者とのコラボレーションを積極的に行い、新しい研究アイデアを生み出しましょう。",
+                    "科学コミュニケーションスキルを磨き、研究成果を一般の人々にも分かりやすく伝える能力を向上させてください。"
+                ],
+                consulting: [
+                    "様々な業界の知識を広げ、多角的な視点でビジネス課題を分析できるようになりましょう。",
+                    "プレゼンテーションスキルやコミュニケーションスキルの向上に努め、クライアントとの信頼関係を築く能力を磨いてください。",
+                    "データ分析スキルを習得し、より説得力のある提案ができるようになりましょう。"
+                ],
+                publicService: [
+                    "行政法や公共政策に関する知識を深め、より効果的な公共サービスの提供を目指しましょう。",
+                    "市民参加型の政策立案手法を学び、より多くの市民の声を反映させた行政を実践してください。",
+                    "デジタル政府の概念や電子行政サービスについて学び、より効率的な行政サービスの提供を目指しましょう。"
+                ]
+            };
+
+            let specificAdvice = '';
+    if (advices[category]) {
+        // ランダムに2つのアドバイスを選択
+        let selectedAdvices = [];
+        while (selectedAdvices.length < 2 && selectedAdvices.length < advices[category].length) {
+            let randomAdvice = advices[category][Math.floor(Math.random() * advices[category].length)];
+            if (!selectedAdvices.includes(randomAdvice)) {
+                selectedAdvices.push(randomAdvice);
+            }
+        }
+        specificAdvice = '\n- ' + selectedAdvices.join('\n\n- ') + '\n\n';
+    } else {
+        specificAdvice = '\nこのカテゴリーに対する具体的なアドバイスはありません。\n\n';
+    }
+
+    return specificAdvice;
+}
+        function getResultComment(topCategory) {
+            const comments = {
+                tech: 'あなたは新しい技術に強い興味を持ち、論理的に考えることが得意です。IT業界でのプログラマーやシステムエンジニアとしての活躍が期待できます。',
+                management: 'あなたは人をまとめ、計画を立てることが得意です。将来的にはプロジェクトマネージャーや経営者としての可能性があります。',
+                creative: 'あなたは豊かな想像力と独創的な発想力を持っています。デザイナーやアーティストとして才能を発揮できるでしょう。',
+                service: 'あなたは人の気持ちを理解し、コミュニケーションを取ることが上手です。接客業やカウンセラーなどの対人サービス職に向いています。',
+                education: '知識を分かりやすく伝える能力に優れています。教師やインストラクターとして、人々の成長をサポートすることができるでしょう。',
+                healthcare: '人々の健康や福祉に貢献したいという強い思いがあります。医療や福祉の分野で、人々の健康を支える仕事に向いています。',
+                manufacturing: 'ものづくりや生産プロセスに興味があり、細かい作業も丁寧に行えます。製造業やエンジニアリングの分野で力を発揮できるでしょう。',
+                sales: '人と接することが好きで、自分の考えを相手に伝えるのが得意です。営業職や広報の仕事で活躍できる素質があります。',
+                agriculture: '自然環境や生態系に強い関心があります。農業や環境保護の分野で、持続可能な未来のために貢献できるでしょう。',
+                science: '論理的思考力と探究心が強く、新しい発見を求める姿勢があります。研究者や科学技術者として、革新的な成果を上げる可能性があります。',
+                consulting: '複雑な問題を分析し、解決策を提案することが得意です。コンサルタントやアナリストとして、ビジネスの世界で活躍できるでしょう。',
+                publicService: '社会正義や公共の利益に関心が高く、規則やルールを重視します。公務員や非営利団体のスタッフとして、社会に貢献できる素質があります。'
+            };
+            return comments[topCategory] || '多様な分野に適性が見られます。興味のある分野をさらに深く探求し、実践的な経験を積むことで、あなたの潜在能力を最大限に発揮できるでしょう。';
+        }
+
+        function getJobDescriptions(category) {
+            const descriptions = {
+    tech: [
+        "ジュニアソフトウェアエンジニア：プログラミング言語を使用してアプリケーションやシステムの開発をサポートします。",
+        "データアナリスト：ビジネスデータを分析し、意思決定に役立つ洞察を提供します。",
+        "クラウドサポートエンジニア：クラウド環境の導入と管理をサポートします。",
+        "情報セキュリティスペシャリスト：組織のサイバーセキュリティ対策を支援します。",
+        "ジュニアモバイルアプリ開発者：スマートフォンやタブレット向けのアプリケーション開発に携わります。"
+    ],
+    management: [
+        "アシスタントプロジェクトマネージャー：プロジェクトの計画と実行をサポートします。",
+        "ジュニアビジネスアナリスト：ビジネスプロセスの分析と改善提案をサポートします。",
+        "人事アシスタント：採用、研修、評価などの人事業務をサポートします。",
+        "マーケティングアシスタント：マーケティング戦略の実行と効果測定を支援します。",
+        "財務アナリスト：財務データの分析と報告書作成を行います。"
+    ],
+    creative: [
+        "ジュニアグラフィックデザイナー：ロゴ、広告、パッケージなどの視覚的デザインを制作します。",
+        "ジュニアUIUXデザイナー：ウェブサイトやアプリのユーザーインターフェースとユーザー体験設計をサポートします。",
+        "コピーライター：広告や販促資材の文章を作成します。",
+        "ビデオエディターアシスタント：映像編集作業をサポートします。",
+        "ジュニアイラストレーター：書籍、雑誌、広告などの挿絵やイラストを制作します。"
+    ],
+    service: [
+        "カスタマーサービス担当：顧客からの問い合わせや苦情に対応し、サポートを提供します。",
+        "ホテルスタッフ：ホテルでの接客や施設管理業務を行います。",
+        "レストランサービススタッフ：飲食店で顧客に食事やサービスを提供します。",
+        "イベントスタッフ：各種イベントの運営や管理をサポートします。",
+        "旅行プランナーアシスタント：旅行プランの提案や手配をサポートします。"
+    ],
+    education: [
+        "教育アシスタント：学校や教育機関で教師のサポートを行います。",
+        "特別支援教育アシスタント：特別なニーズを持つ生徒の学習をサポートします。",
+        "塾講師：学習塾で生徒の学習指導を行います。",
+        "企業研修アシスタント：企業での研修プログラムの運営をサポートします。",
+        "eラーニングコンテンツ制作アシスタント：オンライン学習教材の制作をサポートします。"
+    ],
+    healthcare: [
+        "看護師：患者の健康管理や医療処置を行い、医師をサポートします。",
+        "理学療法士アシスタント：理学療法士の指導のもと、患者の身体機能回復をサポートします。",
+        "栄養士アシスタント：栄養指導や食事計画の立案をサポートします。",
+        "心理カウンセラーアシスタント：カウンセリングセッションの準備や記録をサポートします。",
+        "医療事務：病院や診療所での受付、会計、保険請求などの事務業務を行います。"
+    ],
+    manufacturing: [
+        "品質管理アシスタント：製品の品質検査や品質データの分析をサポートします。",
+        "生産ラインオペレーター：製造ラインでの製品組立や機械操作を行います。",
+        "在庫管理スタッフ：工場や倉庫での在庫管理や物流業務を担当します。",
+        "CADオペレーター：コンピューター支援設計ソフトを使用して製品の設計図面を作成します。",
+        "調達アシスタント：原材料や部品の調達業務をサポートします。"
+    ],
+    sales: [
+        "営業アシスタント：営業活動の準備や顧客データの管理をサポートします。",
+        "店舗販売スタッフ：小売店で商品販売や在庫管理を行います。",
+        "テクニカルセールスサポート：技術的な製品情報の提供や顧客サポートを行います。",
+        "マーケットリサーチャー：市場調査や競合分析を行います。",
+        "インサイドセールス：電話やオンラインを通じて営業活動を行います。"
+    ],
+    agriculture: [
+        "農業生産アシスタント：農作物の栽培や家畜の飼育管理をサポートします。",
+        "農業データアナリスト：農業生産データの収集と分析を行います。",
+        "環境モニタリングスタッフ：農地や周辺環境のモニタリングと記録を行います。",
+        "食品品質管理アシスタント：農産物の品質検査と管理をサポートします。",
+        "都市農業プロジェクトアシスタント：都市部での農業活動の実施をサポートします。"
+    ],
+    science: [
+        "研究アシスタント：研究プロジェクトのデータ収集や実験をサポートします。",
+        "ジュニアデータアナリスト：データの収集、整理、基本的な分析を行います。",
+        "ラボテクニシャン：研究室での実験や機器の操作を担当します。",
+        "フィールドリサーチャー：野外調査やサンプル収集を行います。",
+        "サイエンスコミュニケーター：科学的内容を一般向けに分かりやすく伝える活動を行います。"
+    ],
+    consulting: [
+        "コンサルティングアナリスト：データ収集や分析、報告書作成をサポートします。",
+        "ITサポートスペシャリスト：企業のIT環境の構築や保守を担当します。",
+        "人事コンサルティングアシスタント：人事関連のデータ分析や報告書作成をサポートします。",
+        "財務分析アシスタント：財務データの収集と基本的な分析を行います。",
+        "ビジネスリサーチアナリスト：市場調査や競合分析を行います。"
+    ],
+    publicService: [
+        "行政事務員：地方自治体で一般事務や窓口業務を担当します。",
+        "警察官：地域の安全確保や交通管理、犯罪予防活動に従事します。",
+        "消防官：消火活動や救急救命、防災教育に携わります。",
+        "税務職員：税務署で確定申告の受付や税務相談を担当します。",
+        "福祉事務所職員：社会福祉に関する行政サービスの提供をサポートします。"
+    ]
+
+            };
+            return descriptions[category] || [];
+        }
+
+        function drawRadarChart(scores) {
+            const ctx = document.getElementById('radarChart').getContext('2d');
+            const labels = Object.keys(scores).map(getCategoryName);
+            const data = Object.values(scores);
+
+            new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '適性スコア',
+                        data: data,
+                        backgroundColor: 'rgba(54, 162, 235, 0.2)',
+                        borderColor: 'rgb(54, 162, 235)',
+                        pointBackgroundColor: 'rgb(54, 162, 235)',
+                        pointBorderColor: '#fff',
+                        pointHoverBackgroundColor: '#fff',
+                        pointHoverBorderColor: 'rgb(54, 162, 235)'
+                    }]
+                },
+                options: {
+    responsive: true,
+    maintainAspectRatio: false,
+    aspectRatio: 1, // アスペクト比を変更（例: 2:1）
+    scales: {
+        r: {
+            angleLines: {
+                display: false
+            },
+            suggestedMin: 0,
+            suggestedMax: 5
+        }
+    },
+    animation: {
+        duration: 0
+    },
+    plugins: {
+        legend: {
+            labels: {
+                font: {
+                    size: 10
+                }
+            }
+        }
+    }
+}
+            });
+        }
+
+        function drawBarChart(scores) {
+            const ctx = document.getElementById('barChart').getContext('2d');
+            const labels = Object.keys(scores).map(getCategoryName);
+            const data = Object.values(scores);
+
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '適性スコア',
+                        data: data,
+                        backgroundColor: 'rgba(75, 192, 192, 0.6)',
+                        borderColor: 'rgb(75, 192, 192)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            suggestedMax: 5
+                        }
+                    },
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function drawPieChart(scores) {
+            const ctx = document.getElementById('pieChart').getContext('2d');
+            const labels = Object.keys(scores).map(getCategoryName);
+            const data = Object.values(scores);
+
+            new Chart(ctx, {
+                type: 'pie',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        data: data,
+                        backgroundColor: [
+                            'rgba(255, 99, 132, 0.6)',
+                            'rgba(54, 162, 235, 0.6)',
+                            'rgba(255, 206, 86, 0.6)',
+                            'rgba(75, 192, 192, 0.6)',
+                            'rgba(153, 102, 255, 0.6)',
+                            'rgba(255, 159, 64, 0.6)',
+                            'rgba(199, 199, 199, 0.6)',
+                            'rgba(83, 102, 255, 0.6)',
+                            'rgba(40, 159, 64, 0.6)',
+                            'rgba(210, 199, 199, 0.6)',
+                            'rgba(78, 52, 199, 0.6)',
+                            'rgba(209, 102, 221, 0.6)'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    animation: {
+                        duration: 0
+                    },
+                    plugins: {
+                        legend: {
+                            labels: {
+                                font: {
+                                    size: 10
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.getElementById('submitButton').addEventListener('click', showResults);
+        document.getElementById('backButton').addEventListener('click', previousQuestion);
+        
+        document.getElementById('saveButton').addEventListener('click', function() {
+            html2canvas(document.querySelector(".container")).then(canvas => {
+                const link = document.createElement('a');
+                link.download = '適職診断結果.png';
+                link.href = canvas.toDataURL();
+                link.click();
+            });
+        });
+
+        document.getElementById('printButton').addEventListener('click', function() {
+            window.print();
+        });
+
+        // キーボードでの回答を可能にする
+        document.addEventListener('keydown', function(event) {
+            if (currentQuestion < questions.length) {
+                const key = parseInt(event.key);
+                if (key >= 1 && key <= 5) {
+                    document.getElementById(`q${currentQuestion}_${key}`).checked = true;
+                    nextQuestion();
+                }
+            }
+        });
+
+        // テスト開始
+        showQuestion();
+    </script>
+</body>
+</html>
